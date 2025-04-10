@@ -1,0 +1,138 @@
+export type ISession={
+	/**请求的路径地址*/
+	uri:string
+	/**
+	 * 获取请求查询参数，上传的表单参数也会存储于此，同名参数值存入同一列表
+	 */
+	params:MutableMap<string,MutableList<String>>
+	/**请求的查询参数原字符串*/
+	queryParameterString:string|null
+	/**请求头*/
+	headers:MutableMap<string,string>
+	/**请求的方法*/
+	method:string
+	/**远程主机名*/
+	remoteHostName:string
+	/**远程ip地址*/
+	remoteIpAddress:string
+	/**当为POST方法时，此处获取body*/
+	body:string|null
+	/**当为PUT方法时，此处为存储的文件的临时位置*/
+	tempFilePath:string|null
+	/**当为POST方法，且content-type为"application/json"，且body不为null时，会自动解析body并存于body字段*/
+	json:UTSJSONObject|null
+	/** 获取cookie，Map类型，以cookie的name为键 */
+	cookie:MutableMap<string,string>
+	/**请求的路径参数，为Map类型，值始终为string类型，若需其它类型需自行转换*/
+	pathVariable:MutableMap<string,string>
+}
+export type IResponse={
+	/**状态码,默认为OK(200)，可取值参照nanohttpd中Status枚举值*/
+	status:number
+	/** 当该值不为null时，将读取该路径下文件并返回，路径应为文件的绝对路径，此时body_text、body_json字段将被无视,注意，当文件位于公共存储空间时需申请文件读取权限 */
+	body_file:string|null
+	/** 当该值不为null时,且body_file为null时，将该值转为json字符串返回，此时body_text字段将被无视 */
+	body_json:any|null
+	/** 当该值不为null时，且body_file、body_json为null时，将该值作为响应体返回*/
+	body_text:string|null
+	/**响应的content-type值，为null时自动设置，默认值为null*/
+	mimetype:string|null
+	/** 响应头，默认值为null*/
+	header:UTSJSONObject|null
+}
+/**
+ * 资源处理句柄，参数说明：
+ * - session：存放请求的详细信息
+ * - response：要返回的响应体
+ */
+export type IResourceHandler=(session:ISession,response:IResponse)=>void
+/**
+ * 服务器接口
+ */
+export interface IWebFileServer{
+	/** 启动服务器 */
+	start():boolean
+	/** 获取监听地址 */
+	getHostname():string
+	/** 获取监听的接口 */
+	getListeningPort():number
+	/** 服务器是否运行 */
+	isAlive():boolean
+	/** 设置是否允许跨域访问本服务器，当为true时将允许使用POST,GET,OPTIONS方法跨域访问 */
+	setCors(v:boolean):void
+	/** 关闭服务器 */
+	stop():void
+	/** 
+	 * 添加资源响应路径
+	 * @param method 该路径接收的请求方法，该值除可使用常规的方法如 GET,POST,PUT等，还可以为REQUEST，表示接收所有请求方法 MethodType.REQUEST
+	 * @param uri 指定资源路径，允许使用路径参数，如"/api/{test}/user/{id}"，之后在回调方法中通过pathVariable变量获取参数值，值始终为string，若需要其它类型需自行转换
+	 * @param handler 回调方法，指定在该资源触发时要执行的方法，类型为(session:ISession,response:IResponse)=>void
+	 * 
+	 * 			其中session.pathVariable参数为请求的路径参数，可通过session.pathVariable["test"]，session.pathVariable["id"]获取路径参数值
+	 */
+	addResourceHandler(method:string,uri:string,handler:IResourceHandler):void
+	/**
+	 * 添加代理路径
+	 * @param uri 本地服务器uri地址
+	 * @param targetHost 目标服务器地址
+	 * @example 执行方法`addProxyPath("/proxy/api","http://www.proxy.example:12345")`后，
+	 * 对于该服务器的请求如"/proxy/api/user/get/info"将自动请求"www.proxy.example:12345/user/get/info"并返回响应
+	 */
+	addProxyPath(uri:string,targetHost:string):void
+	/**
+	 * 更新静态资源文件所在根目录的路径类型，传入类StaticPathType下的静态属性，默认类型为Assets，可选值：Assets,Static,Public
+	 * - Assets：将在应用内部存储空间（代码包文件内）获取静态资源文件，此时设置路径将以代码包内/asstes文件夹为根目录设置相对路径，对应项目中"/nativeResources/android/assets/"目录。
+	 *   
+	 *   该模式默认路径为"static/public"，对应项目中目录"/nativeResources/android/assets/static/public"目录。
+	 * 
+	 *   注意，未打包自定义基座时，"/nativeResources"下文件不会随应用安装进系统。
+	 * - Static：将在应用外部存储空间"/storage/emulated/0/Android/data/包名/"获取静态资源文件，此时设置路径将以"包名/app/_UNI_xxxx/www/static"文件夹为根目录设置相对路径，对应项目中"/static/"目录。
+	 * 
+	 *  该模式默认路径为"assets/static"，对应项目中目录"/static/assets/static"目录
+	 * - Public：将在系统公共存储空间("/storage/emulated/0/")获取静态资源文件，此时设置路径需设置目录的绝对路径。
+	 *  
+	 *   该模式默认路径为"/storage/emulated/0/Documents/static"。
+	 * 
+	 * 	注意，公共路径需申请文件读取权限。
+	 */
+	updateStaticFilePathType(staticFilePathType:number):void
+	updateStaticFilePathType(staticFilePathType: number,path:string):void
+	/** 
+	 * 更新静态资源文件的路径，注意，当前路径类型将影响更新路径的过程 
+	 * 路径类型默认为Assets，可选值：Assets,Static,Public
+	 * - Assets：将在应用内部存储空间（代码包文件内）获取静态资源文件，此时设置路径将以代码包内/asstes文件夹为根目录设置相对路径，对应项目中"/nativeResources/android/assets/"目录。
+	 *   
+	 *   该模式默认路径为"static/public"，对应项目中目录"/nativeResources/android/assets/static/public"目录。
+	 * 
+	 *   注意，未打包自定义基座时，"/nativeResources"下文件不会随应用安装进系统。
+	 * - Static：将在应用外部存储空间"/storage/emulated/0/Android/data/包名/"获取静态资源文件，此时设置路径将以"包名/app/_UNI_xxxx/www/static"文件夹为根目录设置相对路径，对应项目中"/static/"目录。
+	 * 
+	 *  该模式默认路径为"assets/static"，对应项目中目录"/static/assets/static"目录
+	 * - Public：将在系统公共存储空间("/storage/emulated/0/")获取静态资源文件，此时设置路径需设置目录的绝对路径。
+	 *  
+	 *   该模式默认路径为"/storage/emulated/0/Documents/static"。
+	 * 
+	 * 	 注意，公共路径需申请文件读取权限。
+	 */
+	updateStaticFilePath(path:string):void
+	/* 获取静态资源文件的路径 */
+	getStaticFilePath():string
+	/**
+	 * 获取静态资源文件所在根目录的路径类型，对应类型：
+	 * - 0 -> Assets
+	 * - 1 -> Static
+	 * - 2 -> Public
+	 */
+	getStaticFilePathType():number
+	/**
+	 * @param path **该路径应传入绝对路径**
+	 * 
+	 * **方法作用**
+	 * - 更新获取MimeType文件的位置，服务器启动后将先尝试从代码包文件内（项目内对应路径："/nativeResources/android/assets/nanohttpd/mimetypes.properties"）MimeType文件读取mimetype对应数据，当文件不存在时再从静态文件目录（项目内对应路径："/static/assets/nanohttpd/mimetypes.properties"）读取数据
+	 * - 服务器将根据文件后缀名设置响应的mimietype
+	 * - 当均读取失败时，可识别的mimietype包含：text/javascript,text/css,text/html,text/plain,text/xml,image/gif,image/jpeg,image/png,image/x-icon。
+	 * - 插件自带一个文件"default-mimetypes.properties"，当未打包自定义基座时不可用，放置于项目目录"/static/assets/nanohttpd/"下，在不打包自定义基座的情况下也可用，服务器也会进行读取。
+	 * - 本方法仅可设置在静态目录下的文件父目录位置（不要直接指定到文件路径），且需在服务器启动前执行。
+	 */
+	updateStaticMimeFilePath(path:string):void
+}

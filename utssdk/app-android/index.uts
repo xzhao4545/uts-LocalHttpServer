@@ -1,0 +1,240 @@
+import {WebFileServer,LOG} from 'com.xzhao.localhttpserver';
+import { IWebFileServer,IResourceHandler,ISession,IResponse } from '../interface.uts';
+import {NanoHTTPD} from "fi.iki.elonen"
+import MealType from 'android.health.connect.datatypes.MealType';
+import Method from 'java.lang.reflect.Method';
+
+/**
+ * 具有属性：
+ * - Assets
+ * - Static
+ * - Public
+ */
+export class StaticPathType{
+	static Assets=0
+	static Static=1
+	static Public=2
+	private constructor(){}
+}
+export class MethodType{
+	static GET="GET"
+	static PUT="PUT"
+	static POST="POST"
+	static DELETE="DELETE"
+	static HEAD="HEAD"
+	static OPTIONS="OPTIONS"
+	static TRACE="TRACE"
+	static CONNECT="CONNECT"
+	static PATCH="PATCH"
+	static PROPFIND="PROPFIND"
+	static PROPPATCH="PROPPATCH"
+	static MKCOL="MKCOL"
+	static MOVE="MOVE"
+	static COPY="COPY"
+	static LOCK="LOCK"
+	static UNLOCK="UNLOCK"
+	static REQUEST="REQUEST"
+	private constructor(){}
+}
+export class Status{
+	static SWITCH_PROTOCOL=101
+	static OK=200
+	static CREATED=201
+	static ACCEPTED=202
+	static NO_CONTENT=204
+	static PARTIAL_CONTENT=206
+	static MULTI_STATUS=207
+	static REDIRECT=301
+	static FOUND=302
+	static REDIRECT_SEE_OTHER=303
+	static NOT_MODIFIED=304
+	static TEMPORARY_REDIRECT=307
+	static BAD_REQUEST=400
+	static UNAUTHORIZED=401
+	static FORBIDDEN=403
+	static NOT_FOUND=404
+	static METHOD_NOT_ALLOWED=405
+	static NOT_ACCEPTABLE=406
+	static REQUEST_TIMEOUT=408
+	static CONFLICT=409
+	static GONE=410
+	static LENGTH_REQUIRED=411
+	static PRECONDITION_FAILED=412
+	static PAYLOAD_TOO_LARGE=413
+	static UNSUPPORTED_MEDIA_TYPE=415
+	static RANGE_NOT_SATISFIABLE=416
+	static EXPECTATION_FAILED=417
+	static TOO_MANY_REQUESTS=429
+	static INTERNAL_ERROR=500
+	static NOT_IMPLEMENTED=501
+	static SERVICE_UNAVAILABLE=503
+	static UNSUPPORTED_HTTP_VERSION=505
+	private constructor(){}
+}
+
+function statusLookup(s:number):NanoHTTPD.Response.Status{
+	if(s==200){
+		return NanoHTTPD.Response.Status.OK
+	}
+	let st=NanoHTTPD.Response.Status.lookup(s as Int)
+	if(st==null){
+		return NanoHTTPD.Response.Status.OK
+	}
+	return st
+}
+type ResourceHandler=(session:NanoHTTPD.IHTTPSession,pathVariable:MutableMap<String,String>)=>NanoHTTPD.Response
+const defaultResponse:IResponse={
+	status:200,
+	body_file:null,
+	body_json:null,
+	body_text=null,
+	mimetype=null,
+	header=null
+}
+const generateHandler=function(server:WebFileServer,handler:IResourceHandler):ResourceHandler{
+	const h=function(session:NanoHTTPD.IHTTPSession,pathVariable:MutableMap<String,String>):NanoHTTPD.Response{
+		let map:MutableMap<string,string>|null=null
+		if(session.method==NanoHTTPD.Method.POST||session.method==NanoHTTPD.Method.PUT){
+			map=session.parseBody()
+		}
+		let body:string|null=map?.get("postData")
+		let ct:string|null=session.headers["content-type"]
+		let json:UTSJSONObject|null=null
+		if(ct!=null&&body!=null&&ct=="application/json"){
+			json=JSON.parseObject(body)
+		}
+		let isession:ISession={uri:session.uri,params:session.getParameters(),headers:session.headers,queryParameterString:session.queryParameterString,
+				remoteHostName:session.remoteHostName,remoteIpAddress:session.remoteIpAddress,method:session.method!!.name,body:body,tempFilePath:map?.get("content"),
+				json:json,cookie:session.cookies.cookies,pathVariable:pathVariable}
+		let ires:IResponse={...defaultResponse} as IResponse
+		handler(isession,ires)
+		let status=statusLookup(ires.status)
+		let r:NanoHTTPD.Response|null=null
+		if(ires.body_file!=null){
+			r=server.newFixedLengthResponse(status,ires.mimetype,ires.body_file!!)
+		}else if(ires.body_json!=null){
+			let s=JSON.stringify(ires.body_json)
+			if(ires.mimetype==null){
+				ires.mimetype="application/json"
+			}
+			r=NanoHTTPD.newFixedLengthResponse(status,ires.mimetype,s)
+		}else if(ires.body_text!=null){
+			if(ires.mimetype==null){
+				ires.mimetype="text/plain"
+			}
+			r=NanoHTTPD.newFixedLengthResponse(status,ires.mimetype,ires.body_text!!)
+		}else{
+			r=new NanoHTTPD.Response(status,ires.mimetype,null,0)
+		}
+		if(ires.header!=null){
+			ires.header!!.toMap().forEach((value, key) => {
+			        r.addHeader(key,value.toString())
+			      })
+		}
+		return r
+	}
+	return h
+}
+
+export class AndroidWebFileServer implements IWebFileServer{
+	server:WebFileServer
+	constructor(host:string,port:number){
+		let staticPath=UTSAndroid.getResourcePath("/static/assets")
+		this.server=new WebFileServer(UTSAndroid.getAppContext(),staticPath,host,port as Int)
+	}
+	/* 启动服务器 */
+	override start():boolean{
+		try{
+			if(!server.isAlive)
+				this.server.start()
+			return true
+		}catch(e){
+			console.log("The server failed to start. Please try changing the port number and try again.",e)
+			return false
+		}
+	}
+	/* 获取监听地址 */
+	override getHostname():string{
+		return this.server.hostname!!
+	}
+	/* 获取监听的接口 */
+	override getListeningPort():number{
+		return this.server.listeningPort
+	}
+	/* 服务器是否运行 */
+	override isAlive():boolean{
+		return this.server.isAlive
+	}
+	override setCors(v:boolean):void{
+		this.server.cors=v
+	}
+	/* 关闭服务器 */
+	override stop():void{
+		this.server.stop()
+	}
+	
+	override addResourceHandler(method:string,uri:string,handler:IResourceHandler):void{
+		this.server.addUriMethod(method,uri,generateHandler(this.server,handler))
+	}
+	override addProxyPath(uri:string,targetHost:string):void{
+		this.server.addProxyPath(uri,targetHost)
+	}
+	override updateStaticFilePathType(staticFilePathType: number,path:string):void{
+		path="static/"+path
+		if(staticFilePathType==WebFileServer.StaticPath.Static.typeValue&&path!=null){
+			path=UTSAndroid.getResourcePath(path)
+		}
+	    this.server.updateStaticFilePathType(staticFilePathType as Int,path)
+	}
+	override updateStaticFilePathType(staticFilePathType: number):void{
+		this.server.updateStaticFilePathType(staticFilePathType as Int)
+	}
+	override updateStaticFilePath(path:string):void{
+		path="static/"+path
+		if(this.server.staticPathType==WebFileServer.StaticPath.Static&&path!=null){
+			path=UTSAndroid.getResourcePath(path)
+		}
+	    this.server.updateStaticFilePath(path)
+	}
+	override getStaticFilePath():string{
+	    return this.server.getStaticFilePath()
+	}
+	override getStaticFilePathType():number{
+		return this.server.staticPathType.typeValue
+	}
+	override updateStaticMimeFilePath(path:string):void{
+		this.server.updateStaticMimeFilePath(path)
+	}
+}
+/* 创建服务器实例 */
+export function createServer(port:number,host:string="0.0.0.0"):IWebFileServer{
+	return new AndroidWebFileServer(host,port)
+}
+
+/**
+ * 设置日志等级，可取值，int型数：
+ * - "OFF"：-1
+ * - "SEVERE"：1000
+ * - "WARNING",：900
+ * - "INFO",：800
+ * - "CONFIG",：700
+ * - "FINE",：500
+ * - "FINER",：400
+ * - "FINEST",：300
+ * - "ALL"：0
+ */
+export function setLogLevel(level:number){
+	LOG.setLevel(level as Int)
+}
+export class LogLevel{
+	static OFF=-1
+	static SEVERE=1000
+	static WARNING=900
+	static INFO=800
+	static CONFIG=700
+	static FINE=500
+	static FINER=400
+	static FINEST=300
+	static ALL=0
+	private constructor(){}
+}
