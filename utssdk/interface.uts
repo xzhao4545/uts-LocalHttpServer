@@ -4,7 +4,7 @@ export type ISession={
 	/**
 	 * 获取请求查询参数，上传的表单参数也会存储于此，同名参数值存入同一列表
 	 */
-	params:MutableMap<string,MutableList<String>>
+	params:MutableMap<string,MutableList<string>>
 	/**请求的查询参数原字符串*/
 	queryParameterString:string|null
 	/**请求头*/
@@ -96,7 +96,7 @@ export interface IWebFileServer{
 	 * 	注意，公共路径需申请文件读取权限。
 	 */
 	updateStaticFilePathType(staticFilePathType:number):void
-	updateStaticFilePathType(staticFilePathType: number,path:string):void
+	updateStaticFilePathTypeWithPath(staticFilePathType: number,path:string):void
 	/** 
 	 * 更新静态资源文件的路径，注意，当前路径类型将影响更新路径的过程 
 	 * 路径类型默认为Assets，可选值：Assets,Static,Public

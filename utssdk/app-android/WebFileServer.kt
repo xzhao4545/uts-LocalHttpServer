@@ -100,7 +100,7 @@ class WebFileServer(context: Context?,staticPath:String, hostname: String?, port
 
         companion object {
             fun fromTypeValue(typeValue: Int): StaticPath? {
-                return entries.find { it.typeValue == typeValue }
+                return values().find { it.typeValue == typeValue }
             }
         }
     }
@@ -303,7 +303,7 @@ class WebFileServer(context: Context?,staticPath:String, hostname: String?, port
                 node=nodes[ind]
                 if(uriNode.proxyPath!=null){
                     val sb=java.lang.StringBuilder()
-                    for(i in ind..<nodes.size){
+                    for(i in ind until nodes.size){
                         sb.append('/').append(nodes[i])
                     }
                     map["proxyPath"]=sb.toString()
@@ -338,12 +338,12 @@ class WebFileServer(context: Context?,staticPath:String, hostname: String?, port
             if(session.queryParameterString!=null){
                 turl+="?${session.queryParameterString}"
             }
-			LOG.all("proxy: $turl")
+            LOG.all("proxy: $turl")
             val url = URL(turl)
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = method
             connection.doInput = true
-			
+
             // 复制请求头（避免 Host 头部冲突）
             session.headers.forEach { (key, value) ->
                 if (!key.equals("host", ignoreCase = true)) {
@@ -393,9 +393,9 @@ class LOG{
         fun severe(vararg msg:Any?){
             log(Level.SEVERE,*msg)
         }
-		fun all(vararg msg:Any?){
-		    log(Level.ALL,*msg)
-		}
+        fun all(vararg msg:Any?){
+            log(Level.ALL,*msg)
+        }
         fun setLevel(level:Int){
             if(level<0){
                 levelValue= Int.MAX_VALUE

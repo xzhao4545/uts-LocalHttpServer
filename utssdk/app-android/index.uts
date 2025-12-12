@@ -1,8 +1,6 @@
 import {WebFileServer,LOG} from 'com.xzhao.localhttpserver';
 import { IWebFileServer,IResourceHandler,ISession,IResponse } from '../interface.uts';
 import {NanoHTTPD} from "fi.iki.elonen"
-import MealType from 'android.health.connect.datatypes.MealType';
-import Method from 'java.lang.reflect.Method';
 
 /**
  * 具有属性：
@@ -14,7 +12,6 @@ export class StaticPathType{
 	static Assets=0
 	static Static=1
 	static Public=2
-	private constructor(){}
 }
 export class MethodType{
 	static GET="GET"
@@ -34,7 +31,6 @@ export class MethodType{
 	static LOCK="LOCK"
 	static UNLOCK="UNLOCK"
 	static REQUEST="REQUEST"
-	private constructor(){}
 }
 export class Status{
 	static SWITCH_PROTOCOL=101
@@ -69,7 +65,6 @@ export class Status{
 	static NOT_IMPLEMENTED=501
 	static SERVICE_UNAVAILABLE=503
 	static UNSUPPORTED_HTTP_VERSION=505
-	private constructor(){}
 }
 
 function statusLookup(s:number):NanoHTTPD.Response.Status{
@@ -87,12 +82,12 @@ const defaultResponse:IResponse={
 	status:200,
 	body_file:null,
 	body_json:null,
-	body_text=null,
-	mimetype=null,
-	header=null
+	body_text:null,
+	mimetype:null,
+	header:null
 }
 const generateHandler=function(server:WebFileServer,handler:IResourceHandler):ResourceHandler{
-	const h=function(session:NanoHTTPD.IHTTPSession,pathVariable:MutableMap<String,String>):NanoHTTPD.Response{
+	const h=function(session:NanoHTTPD.IHTTPSession,pathVariable:MutableMap<string,string>):NanoHTTPD.Response{
 		let map:MutableMap<string,string>|null=null
 		if(session.method==NanoHTTPD.Method.POST||session.method==NanoHTTPD.Method.PUT){
 			map=session.parseBody()
@@ -145,7 +140,7 @@ export class AndroidWebFileServer implements IWebFileServer{
 	/* 启动服务器 */
 	override start():boolean{
 		try{
-			if(!server.isAlive)
+			if(!this.server.isAlive)
 				this.server.start()
 			return true
 		}catch(e){
@@ -179,7 +174,7 @@ export class AndroidWebFileServer implements IWebFileServer{
 	override addProxyPath(uri:string,targetHost:string):void{
 		this.server.addProxyPath(uri,targetHost)
 	}
-	override updateStaticFilePathType(staticFilePathType: number,path:string):void{
+	override updateStaticFilePathTypeWithPath(staticFilePathType: number,path:string):void{
 		path="static/"+path
 		if(staticFilePathType==WebFileServer.StaticPath.Static.typeValue&&path!=null){
 			path=UTSAndroid.getResourcePath(path)
@@ -236,5 +231,4 @@ export class LogLevel{
 	static FINER=400
 	static FINEST=300
 	static ALL=0
-	private constructor(){}
 }

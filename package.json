@@ -1,7 +1,7 @@
 {
   "id": "xzhao-uts-LocalHttpServer",
   "displayName": "安卓本地部署的Http服务器",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "支持添加接口处理方法、路径参数，支持添加代理，支持指定静态资源文件路径",
   "keywords": [
     "web",
@@ -9,7 +9,7 @@
     "uts",
     "android"
 ],
-  "repository": "",
+  "repository": "https://github.com/xzhao4545/uts-LocalHttpServer",
   "engines": {
     "HBuilderX": "^4.25"
   },
@@ -17,7 +17,7 @@
     "type": "uts",
     "sale": {
       "regular": {
-        "price": "5.00"
+        "price": "0.00"
       }
     },
     "contact": {
@@ -47,7 +47,7 @@
         "App": {
             "app-android": "y",
             "app-ios": "n",
-            "app-harmony": "u"
+            "app-harmony": "n"
         },
         "H5-mobile": {
           "Safari": "n",
@@ -63,19 +63,19 @@
           "Safari": "n"
         },
         "小程序": {
-          "微信": "u",
-          "阿里": "u",
-          "百度": "u",
-          "字节跳动": "u",
-          "QQ": "u",
-          "钉钉": "u",
-          "快手": "u",
-          "飞书": "u",
-          "京东": "u"
+          "微信": "n",
+          "阿里": "n",
+          "百度": "n",
+          "字节跳动": "n",
+          "QQ": "n",
+          "钉钉": "n",
+          "快手": "n",
+          "飞书": "n",
+          "京东": "n"
         },
         "快应用": {
-          "华为": "u",
-          "联盟": "u"
+          "华为": "n",
+          "联盟": "n"
         }
       }
     }

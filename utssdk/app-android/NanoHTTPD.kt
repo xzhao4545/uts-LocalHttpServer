@@ -45,7 +45,6 @@ import java.util.logging.Level
 import java.util.regex.Pattern
 import java.util.zip.GZIPOutputStream
 import javax.net.ssl.*
-import kotlin.concurrent.Volatile
 import kotlin.math.min
 
 import com.xzhao.localhttpserver.LOG
@@ -1338,7 +1337,7 @@ abstract class NanoHTTPD(protected val context: Context?,staticPath:String, val 
 
             companion object {
                 fun lookup(requestStatus: Int): Status? {
-                    for (status in entries) {
+                    for (status in values()) {
                         if (status.requestStatus == requestStatus) {
                             return status
                         }

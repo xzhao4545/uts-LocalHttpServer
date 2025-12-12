@@ -289,7 +289,7 @@ server.updateStaticMimeFilePath('/static/assets/nanohttpd');
 			//设置日志等级
 			setLogLevel(LogLevel.ALL)
 			//更新静态资源路径类型
-			server.updateStaticFilePathType(StaticPathType.Static,"assets/static")
+			server.updateStaticFilePathTypeWithPath(StaticPathType.Static,"assets/static")
 			// server.updateStaticFilePath("public")
 			console.log("静态资源路径为：",server.getStaticFilePath())
 			console.log("静态资源路径类型为：",server.getStaticFilePathType())
